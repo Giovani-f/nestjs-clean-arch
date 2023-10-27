@@ -14,7 +14,6 @@ export class ProjectsService {
 
   create(createProjectDto: CreateProjectDto) {
     const project = new Project(createProjectDto);
-    this.create(createProjectDto);
     if (createProjectDto.started_at) {
       project.status = ProjectStatus.Active;
     }
