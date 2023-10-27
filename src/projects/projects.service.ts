@@ -1,26 +1,98 @@
 import { Injectable } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Project, ProjectStatus } from './entities/project.entity';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class ProjectsService {
+  constructor(
+    @InjectRepository(Project)
+    private readonly projectRepository: Repository<Project>,
+  ) {}
+
   create(createProjectDto: CreateProjectDto) {
-    return 'This action adds a new project';
+    const project = new Project(createProjectDto);
+    this.create(createProjectDto);
+    if (createProjectDto.started_at) {
+      project.status = ProjectStatus.Active;
+    }
+
+    return this.projectRepository.save(project);
   }
 
   findAll() {
-    return `This action returns all projects`;
+    return this.projectRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} project`;
+  findOne(id: string) {
+    return this.projectRepository.findOneOrFail({ where: { id } });
   }
 
-  update(id: number, updateProjectDto: UpdateProjectDto) {
-    return `This action updates a #${id} project`;
+  async update(id: string, updateProjectDto: UpdateProjectDto) {
+    const project = await this.projectRepository.findOneOrFail({
+      where: { id },
+    });
+    updateProjectDto.name && (project.name = updateProjectDto.name);
+    updateProjectDto.description &&
+      (project.description = updateProjectDto.description);
+
+    if (updateProjectDto.started_at) {
+      if (project.status === ProjectStatus.Active) {
+        throw new Error('Cannot start activated project');
+      }
+
+      if (project.status === ProjectStatus.Completed) {
+        throw new Error('Cannot start completed project');
+      }
+
+      if (project.status === ProjectStatus.Cancelled) {
+        throw new Error('Cannot start cancelled project');
+      }
+
+      project.started_at = updateProjectDto.started_at;
+      project.status = ProjectStatus.Active;
+    }
+
+    if (updateProjectDto.cancelled_at) {
+      if (project.status === ProjectStatus.Completed) {
+        throw new Error('Cannot cancel completed project');
+      }
+
+      if (project.status === ProjectStatus.Cancelled) {
+        throw new Error('Cannot cancel cancelled project');
+      }
+
+      if (updateProjectDto.cancelled_at < project.started_at) {
+        throw new Error('Cannot cancel project before it was started');
+      }
+
+      project.cancelled_at = updateProjectDto.cancelled_at;
+      project.status = ProjectStatus.Cancelled;
+    }
+
+    if (updateProjectDto.finished_at) {
+      if (project.status === ProjectStatus.Completed) {
+        throw new Error('Cannot finish completed project');
+      }
+
+      if (project.status === ProjectStatus.Cancelled) {
+        throw new Error('Cannot finish cancelled project');
+      }
+
+      if (updateProjectDto.finished_at < project.started_at) {
+        throw new Error('Cannot finish project before it was started');
+      }
+
+      project.finished_at = updateProjectDto.finished_at;
+      project.status = ProjectStatus.Completed;
+    }
+
+    return this.projectRepository.update(id, updateProjectDto);
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return `This action removes a #${id} project`;
   }
 }
