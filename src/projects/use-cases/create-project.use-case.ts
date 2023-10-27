@@ -1,19 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { CreateProjectDto } from '../dto/create-project.dto';
 import { Project } from '../entities/project.entity';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
+import { IProjectRepository } from '../interfaces/project.repository';
 
 @Injectable()
 export class CreateProjectUseCase {
   constructor(
-    @InjectRepository(Project)
-    private readonly projectRepository: Repository<Project>,
+    @Inject('IProjectRepository')
+    private readonly projectRepository: IProjectRepository,
   ) {}
 
-  execute(input: CreateProjectDto) {
+  async execute(input: CreateProjectDto) {
     const project = new Project(input);
-    project.start(input.started_at);
-    return this.projectRepository.save(project);
+    await this.projectRepository.create(project);
+    return project;
   }
 }
