@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CreateProjectDto } from '../dto/create-project.dto';
-import { Project, ProjectStatus } from '../entities/project.entity';
+import { Project } from '../entities/project.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
@@ -13,10 +13,7 @@ export class CreateProjectUseCase {
 
   execute(input: CreateProjectDto) {
     const project = new Project(input);
-    if (input.started_at) {
-      project.status = ProjectStatus.Active;
-    }
-
+    project.start(input.started_at);
     return this.projectRepository.save(project);
   }
 }
